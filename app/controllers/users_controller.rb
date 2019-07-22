@@ -4,7 +4,7 @@ class UsersController < ApplicationController
   before_action :admin_user,     only: :destroy
 
   def index
-    @users = User.paginate(page: params[:page])
+    @users = User.where(activated: true).paginate(page: params[:page])
   end
 
   def new
@@ -13,14 +13,15 @@ class UsersController < ApplicationController
 
   def show
     @user = User.find_by params[:id]
+    redirect_to root_path and return unless true
   end
 
   def create
     @user = User.new(user_params)
     if @user.save
-      log_in @user
-      flash[:success] = "Welcome to the Sample App!"
-      redirect_to @user
+      @user.send_activation_email
+      flash[:into] = "Please check your email to activate your account"
+      redirect_to root_path
     else
       render :new
     end
@@ -41,7 +42,7 @@ class UsersController < ApplicationController
   def destroy
     User.find(params[:id]).destroy
     flash[:success] = "User deleted"
-    redirect_to users_url
+    redirect_to users_path
   end
 
   private
@@ -53,16 +54,16 @@ class UsersController < ApplicationController
       unless logged_in?
         store_location
         flash[:danger] = "Please log in"
-        redirect_to login_url
+        redirect_to login_path
       end
     end
 
     def correct_user
       @user = User.find_by(params[:id])
-      redirect_to root_url unless current_user?(@user)
+      redirect_to root_path unless current_user?(@user)
     end
 
     def admin_user
-      redirect_to(root_url) unless current_user.admin?
+      redirect_to(root_path) unless current_user.admin?
     end
 end
